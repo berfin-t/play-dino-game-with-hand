@@ -25,8 +25,8 @@ $ python dino_game.py
 ```
 # IMPORTANT NOTES
 
-! Make sure you grant usage permission for the camera.
-! The background should be white and there should be no objects.
-! Find an online dino game beforehand and start the project while the game is open.
-! After starting the project, you should left-click on the game tab so that the space key can be used.
-! Press 0 to close the camera window.
+-! Make sure you grant usage permission for the camera.
+-! The background should be white and there should be no objects.
+-! Find an online dino game beforehand and start the project while the game is open.
+-! After starting the project, you should left-click on the game tab so that the space key can be used.
+-! Press 0 to close the camera window.
