@@ -1,17 +1,16 @@
 import tkinter 
-import numpy as np
+import numpy as np                                        
 import cv2 as cv
 import math
 import pyautogui
 from tkinter import *
-from PIL import Image, ImageTk
 import os
 
 root = tkinter.Tk()
 root.geometry("2000x1000")
 root.title("Game Over")
 
-img = PhotoImage(file ="C:\\Users\\berfin\\Desktop\\dino_game\\assets\\game_over.png")
+img = PhotoImage(file = "assets/game_over.png")
 label = Label(
     root,
     image=img
@@ -19,64 +18,64 @@ label = Label(
 label.place(x=0,y=0)
 
 def gameAutomation():
-   # Kamera açma
+   # Open camera
    capture = cv.VideoCapture(0, cv.CAP_DSHOW)
    
    while capture.isOpened():
 
-    # Kameradan kareleri yakalama
+    # Capture frames from camera
         ret, frame = capture.read()
-        frame = cv.flip(frame,1) # kamera ayna görüntüsü için
+        frame = cv.flip(frame,1) # for camera mirror image
 
-    # Karelerden el verilerini almak
+    # Get hand data from frames
         cv.rectangle(frame, (100, 100), (300, 300), (0, 255, 0), 0)
-        # kırpma işlemi
-        crop = frame[100:300, 100:300] #yeni bir nesne yerine orjinal görüntü üzerinde bir görünüm oluşturur
+        # crop operation
+        crop = frame[100:300, 100:300] # creates a view on the original image instead of a new object
 
-    # Gauss bulanıklığı uygulamak
-        blur = cv.GaussianBlur(crop, (3, 3), 0) #görüntüyü yumuşatmak 
+    # Apply Gaussian blur
+        blur = cv.GaussianBlur(crop, (3, 3), 0) # soften the image
 
-    # Renk alanını RGB -> HSV'den değiştirmek
+    # Changing color space from RGB -> HSV
         hsv = cv.cvtColor(blur, cv.COLOR_BGR2HSV)
 
-    # Beyazın ten rengi olacağı ve geri kalanın siyah olduğu bir ikili görüntü oluşturmak
+    # Creating a binary image where white will be the skin color and the rest will be black# Beyazın ten rengi olacağı ve geri kalanın siyah olduğu bir ikili görüntü oluşturmak
         mask = cv.inRange(hsv, np.array([2, 0, 0]), np.array([25, 255, 255])) 
 
-    # Morfolojik dönüşüm için 
+    # For morphological transformation
         kernel = np.ones((5, 5))
 
-    # Arka plan gürültüsünü filtrelemek 
-        dilation = cv.dilate(mask, kernel, iterations=1) #görüntünün ön planını genişletmeyi içerir ve ön planın beyaz olması önerilir
-        erosion = cv.erode(dilation, kernel, iterations=1) #görüntünün ön planını aşındırmayı içerir ve ön planın beyaz olması önerilir
+   # Filtering background noise 
+        dilation = cv.dilate(mask, kernel, iterations=1) #involves expanding the foreground of the image and it is recommended that the foreground be white
+        erosion = cv.erode(dilation, kernel, iterations=1) #involves eroding the foreground of the image and it is recommended that the foreground be white
 
-    # Gauss Bulanıklığı ve Eşiği 
+    # Gaussian Blur and Threshold 
         filtered = cv.GaussianBlur(erosion, (3, 3), 0) 
-        ret, thresh = cv.threshold(filtered, 127, 255, 0) #127 den büyük tüm pikseller 0 olacak şekilde thresh de tutulur
+        ret, thresh = cv.threshold(filtered, 127, 255, 0) #All pixels greater than 127 are kept in thresh to 0.
 
-    # Kontür bul
-        contours, hierachy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE) #elde edilen kontur görünrüdeki beyaz alanların vektörel ifadesi
+    # Find contours
+        contours, hierachy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE) #vector expression of the white areas in the resulting contour image
 
         try:
-        # Maksimum alana sahip kontör bulmak
+        # Find top up with maximum space
             contour = max(contours, key=lambda x: cv.contourArea(x))
 
-        # Kontur etrafında sınırlayıcı dikdörtgen oluşturmak
-            x, y, w, h = cv.boundingRect(contour) # kontur çerçeve noktaları hesaplamak
-            cv.rectangle(crop, (x, y), (x + w, y + h), (0, 0, 255), 0) # kontur etrafına çerçeve çizmek
+        # Create bounding rectangle around contour
+            x, y, w, h = cv.boundingRect(contour) # calculate contour frame points
+            cv.rectangle(crop, (x, y), (x + w, y + h), (0, 0, 255), 0) # draw a frame around the contour
 
-        # Dışbükey gövde bulma
+        # Finding convex hull
             hull = cv.convexHull(contour)
 
-        # Kontur çizme
+        # contour drawing
             drawing = np.zeros(crop.shape, np.uint8)
             cv.drawContours(drawing, [contour], -1, (0, 255, 0), 0)
             cv.drawContours(drawing, [hull], -1, (0, 0, 255), 0)
 
-        # Dışbükey gövde 
-            hull = cv.convexHull(contour, returnPoints=False) # cismin çevresindeki yeşil çerçeve
+        # Convex hull
+            hull = cv.convexHull(contour, returnPoints=False) # green frame around the object
             defects = cv.convexityDefects(contour, hull)
         
-        # Başlangıç ve bitiş noktasından uzak noktanın açısını, yani tüm kusurlar için dışbükey noktaları (parmak uçları) bulmak için kosinüs kuralı
+        # Cosine rule to find the angle of the point far from the start and end point, i.e. convex points (fingertips) for all defects
             count_defects = 0
 
             for i in range(defects.shape[0]):
@@ -96,7 +95,7 @@ def gameAutomation():
 
                 cv.line(crop, start, end, [0, 255, 0], 2)
 
-        # Koşul eşleşiyorsa SPACE tuşuna bas
+       # If the condition matches, press SPACE
 
             if count_defects >= 4:
                     pyautogui.press('space')
@@ -108,14 +107,14 @@ def gameAutomation():
 
         cv.imshow("Gesture", frame)
 
-    # Kamerayı kapat(0 ile)
+   # Turn off camera (with 0)
         if cv.waitKey(1) == ord('0'):
             break
 
    capture.release()
    cv.destroyAllWindows()
  
-# Arayüz için  
+# for interface  
 B1 = tkinter.Button(
     root, 
     text ="Dino Game",
